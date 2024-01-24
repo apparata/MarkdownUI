@@ -7,4 +7,4 @@ See the LICENSE file for licensing information.
 
 ## Example
 
-See `ExampleView.swift` file for an example.
+See [ExampleView.swift](ExampleView.swift) file for an example.
