@@ -30,17 +30,17 @@ struct MyChart: View {
                     x: .value("Color", "Red"),
                     y: .value("Value", 10)
                 )
-                .foregroundStyle(Color(uiColor: UIColor(hexString: "#FF0000")))
+                .foregroundStyle(.red)
                 BarMark(
                     x: .value("Color", "Green"),
                     y: .value("Value", 12)
                 )
-                .foregroundStyle(Color(uiColor: UIColor(hexString: "#00FF00")))
+                .foregroundStyle(.green)
                 BarMark(
                     x: .value("Color", "Blue"),
                     y: .value("Value", 8)
                 )
-                .foregroundStyle(Color(uiColor: UIColor(hexString: "#0000FF")))
+                .foregroundStyle(.blue)
             }
             .frame(height: 200)
             .padding(.horizontal)
