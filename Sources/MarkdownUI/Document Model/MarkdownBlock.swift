@@ -172,7 +172,7 @@ public enum MarkdownBlock: Identifiable {
             public let id: MarkdownBlock.ID
             public let index: Int
             public let isHeader: Bool
-            public let cells: [Cell]
+            public var cells: [Cell]
 
             public init(id: MarkdownBlock.ID, index: Int, isHeader: Bool, cells: [Cell]) {
                 self.id = id
@@ -198,7 +198,7 @@ public enum MarkdownBlock: Identifiable {
 
         public let id: MarkdownBlock.ID
         public let indentationLevel: Int
-        public let rows: [Row]
+        public var rows: [Row]
         public let columns: [Column]
 
         public init(id: MarkdownBlock.ID, indentationLevel: Int, rows: [Row], columns: [Column]) {

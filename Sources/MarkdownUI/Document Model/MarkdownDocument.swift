@@ -254,17 +254,20 @@ public struct MarkdownDocument {
                 break
             }
 
-            if let block = blocksByID[id], case .table(let table) = block {
+            if let block = blocksByID[id], case .table(var table) = block {
                 if table.rows.count > rowIndex {
                     // Row already exists
                     let row = table.rows[rowIndex]
                     let newRow = row.insertingCell(cell, at: cell.index)
                     let newTable = table.replacingRow(at: rowIndex, with: newRow)
                     blocksByID[id] = .table(newTable)
-                } else {
+                } else if table.rows.count <= rowIndex {
                     let row = MarkdownBlock.Table.Row(id: rowID, index: rowIndex, isHeader: isHeaderRow, cells: [cell])
                     let newTable = table.insertingRow(row, at: rowIndex)
                     blocksByID[id] = .table(newTable)
+                } else {
+                    table.rows[rowIndex].cells.append(cell)
+                    blocksByID[id] = .table(table)
                 }
             } else {
                 blockOrder.append(id)
