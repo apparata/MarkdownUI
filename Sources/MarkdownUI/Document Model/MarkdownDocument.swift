@@ -261,13 +261,15 @@ public struct MarkdownDocument {
                     let newRow = row.insertingCell(cell, at: cell.index)
                     let newTable = table.replacingRow(at: rowIndex, with: newRow)
                     blocksByID[id] = .table(newTable)
-                } else if table.rows.count <= rowIndex {
+                } else if table.rows.count == rowIndex {
                     let row = MarkdownBlock.Table.Row(id: rowID, index: rowIndex, isHeader: isHeaderRow, cells: [cell])
                     let newTable = table.insertingRow(row, at: rowIndex)
                     blocksByID[id] = .table(newTable)
+                } else if table.rows.count < rowIndex {
+                    continue
                 } else {
                     table.rows[rowIndex].cells.append(cell)
-                    blocksByID[id] = .table(table)
+                    blocksByID[id] = .table(table )
                 }
             } else {
                 blockOrder.append(id)
