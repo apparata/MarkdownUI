@@ -29,6 +29,10 @@ build/
 
 .build/
 
+### Claude Code ###
+
+.claude/settings.local.json
+
 ### Playgrounds ###
 
 timeline.xctimeline
