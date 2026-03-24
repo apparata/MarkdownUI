@@ -9,7 +9,7 @@ A SwiftUI library for rendering Markdown as native views — no web views, no ex
 - Tables with column alignment
 - Images (remote URLs and local asset catalog)
 - Inline formatting: **bold**, *italic*, `code`, ~~strikethrough~~, [links](https://example.com)
-- Custom view injection via `<view tag="..." />` tags
+- Custom view injection via `<view>` tags with parameters and data payloads
 - Lazy rendering support for long documents
 - Fully customizable styling through SwiftUI environment
 
@@ -68,11 +68,9 @@ Markdown(document, lazy: false)
 
 ### Custom View Injection
 
-Embed custom SwiftUI views inside your Markdown using `<view tag="..." />`:
+Embed custom SwiftUI views inside your Markdown using `<view>` tags. Use the tag-only initializer for simple cases:
 
 ```markdown
-Here is a chart:
-
 <view tag="myChart" />
 ```
 
@@ -85,6 +83,45 @@ Markdown(document, lazy: false) { tag in
         EmptyView()
     }
 }
+```
+
+#### Parameters
+
+Pass HTML-style attributes to custom views. Use the `customView:` initializer to access them:
+
+```markdown
+<view tag="myChart" title="Sales Report" color="blue" />
+```
+
+```swift
+Markdown(document, lazy: false, customView: { customView in
+    switch customView.tag {
+    case "myChart":
+        MyChartView(
+            title: customView.parameters["title"] ?? "Chart",
+            color: customView.parameters["color"] ?? "gray"
+        )
+    default:
+        EmptyView()
+    }
+})
+```
+
+#### Data Payloads
+
+For larger payloads like JSON, use a non-self-closing tag. The content between the tags is available as `Data?`:
+
+```markdown
+<view tag="dataChart">[{"label": "Q1", "value": 42}, {"label": "Q2", "value": 58}]</view>
+```
+
+```swift
+Markdown(document, lazy: false, customView: { customView in
+    if customView.tag == "dataChart", let data = customView.content {
+        let bars = try? JSONDecoder().decode([Bar].self, from: data)
+        MyDataChart(bars: bars ?? [])
+    }
+})
 ```
 
 ### Lazy Rendering
@@ -112,7 +149,7 @@ Markdown(document, lazy: true)
 | Code blocks | ` ```language ` |
 | Tables | `\| col \| col \|` with alignment |
 | Dividers | `---` |
-| Custom views | `<view tag="name" />` |
+| Custom views | `<view tag="name" />` or `<view tag="name">data</view>` |
 
 ## License
 

@@ -243,10 +243,14 @@ public enum MarkdownBlock: Identifiable {
         public let id: MarkdownBlock.ID
         public let indentationLevel: Int = 0
         public let tag: String
+        public let parameters: [String: String]
+        public let content: Data?
 
-        public init(id: MarkdownBlock.ID, tag: String) {
+        public init(id: MarkdownBlock.ID, tag: String, parameters: [String: String] = [:], content: Data? = nil) {
             self.id = id
             self.tag = tag
+            self.parameters = parameters
+            self.content = content
         }
     }
 

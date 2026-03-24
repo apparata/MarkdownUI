@@ -57,11 +57,11 @@ public struct MarkdownDocument {
             let part = string[range]
             if part.inlinePresentationIntent == .blockHTML {
                 let string = String(part.characters)
-                if let tag = Self.extractCustomViewTag(from: string) {
+                if let result = Self.extractCustomView(from: string) {
                     let id = currentCustomViewID
                     currentCustomViewID += 1
                     blockOrder.append(id)
-                    blocksByID[id] = .customView(.init(id: id, tag: tag))
+                    blocksByID[id] = .customView(.init(id: id, tag: result.tag, parameters: result.parameters, content: result.content))
                 }
             }
 
@@ -84,8 +84,11 @@ public struct MarkdownDocument {
         case .paragraph:
             blockOrder.append(id)
             let text = AttributedString(string[range])
+            let plainText = String(string[range].characters)
             if let url = string[range].imageURL {
                 blocksByID[id] = .image(.init(id: id, indentationLevel: level, text: text, url: url))
+            } else if let result = Self.extractCustomView(from: plainText) {
+                blocksByID[id] = .customView(.init(id: id, tag: result.tag, parameters: result.parameters, content: result.content))
             } else {
                 blocksByID[id] = .paragraph(.init(id: id, indentationLevel: level, text: text))
             }
@@ -290,25 +293,56 @@ public struct MarkdownDocument {
     }
 
 
-    private static func extractCustomViewTag(from string: String) -> String? {
+    private static func extractCustomView(from string: String) -> (tag: String, parameters: [String: String], content: Data?)? {
         let scanner = Scanner(string: string)
         scanner.charactersToBeSkipped = .none
 
-        _ = scanner.scanUpToString(#"<view tag=""#)
-        guard scanner.scanString(#"<view tag=""#) != nil else {
+        _ = scanner.scanUpToString("<view ")
+        guard scanner.scanString("<view ") != nil else {
             return nil
         }
-        guard let tag = scanner.scanUpToString(#"""#) else {
+
+        var attributes: [String: String] = [:]
+        var content: Data?
+
+        while !scanner.isAtEnd {
+            _ = scanner.scanCharacters(from: .whitespaces)
+
+            // Self-closing: <view tag="name" />
+            if scanner.scanString("/>") != nil {
+                break
+            }
+
+            // Opening tag end: <view tag="name">content</view>
+            if scanner.scanString(">") != nil {
+                if let body = scanner.scanUpToString("</view>") {
+                    content = body.data(using: .utf8)
+                }
+                _ = scanner.scanString("</view>")
+                break
+            }
+
+            guard let key = scanner.scanCharacters(from: .alphanumerics) else {
+                return nil
+            }
+            guard scanner.scanString(#"=""#) != nil else {
+                return nil
+            }
+            guard let value = scanner.scanUpToString(#"""#) else {
+                return nil
+            }
+            guard scanner.scanString(#"""#) != nil else {
+                return nil
+            }
+
+            attributes[key] = value
+        }
+
+        guard let tag = attributes.removeValue(forKey: "tag") else {
             return nil
         }
-        guard scanner.scanString(#"""#) != nil else {
-            return nil
-        }
-        _ = scanner.scanCharacters(from: .whitespaces)
-        guard scanner.scanString("/>") != nil else {
-            return nil
-        }
-        return tag
+
+        return (tag: tag, parameters: attributes, content: content)
     }
 
 }

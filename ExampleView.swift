@@ -7,14 +7,16 @@ struct ExampleView: View {
 
     var body: some View {
         ScrollView(.vertical) {
-            Markdown(markdown, lazy: false) { tag in
-                switch tag {
+            Markdown(markdown, lazy: false, customView: { customView in
+                switch customView.tag {
                 case "myChart":
-                    MyChart()
+                    MyChart(title: customView.parameters["title"] ?? "Chart")
+                case "dataChart":
+                    DataChart(customView: customView)
                 default:
                     EmptyView()
                 }
-            }
+            })
             .markdownStyle(MarkdownStyle())
             .tint(.blue)
             .padding()
@@ -23,6 +25,8 @@ struct ExampleView: View {
 }
 
 struct MyChart: View {
+    var title: String = "Chart"
+
     var body: some View {
         if #available(iOS 16.0, macOS 13.0, *) {
             Chart {
@@ -41,6 +45,33 @@ struct MyChart: View {
                     y: .value("Value", 8)
                 )
                 .foregroundStyle(.blue)
+            }
+            .frame(height: 200)
+            .padding(.horizontal)
+        }
+    }
+}
+
+struct DataChart: View {
+    var customView: MarkdownBlock.CustomView
+
+    struct Bar: Decodable {
+        let label: String
+        let value: Double
+    }
+
+    var bars: [Bar] {
+        guard let data = customView.content else { return [] }
+        return (try? JSONDecoder().decode([Bar].self, from: data)) ?? []
+    }
+
+    var body: some View {
+        if #available(iOS 16.0, macOS 13.0, *) {
+            Chart(bars, id: \.label) { bar in
+                BarMark(
+                    x: .value("Label", bar.label),
+                    y: .value("Value", bar.value)
+                )
             }
             .frame(height: 200)
             .padding(.horizontal)
@@ -127,7 +158,11 @@ And here's a local image:
 
 Here's a custom view:
 
-<view tag="myChart" />
+<view tag="myChart" title="Sales Data" />
 
-This is just some text after the custom view.
+Here's a data-driven chart with a JSON payload:
+
+<view tag="dataChart">[{"label": "Q1", "value": 42}, {"label": "Q2", "value": 58}, {"label": "Q3", "value": 35}, {"label": "Q4", "value": 71}]</view>
+
+This is just some text after the custom views.
 """#

@@ -9,12 +9,19 @@ public struct Markdown<Content: View>: View {
 
     private let lazy: Bool
 
-    private let customViewBuilder: (CustomViewTag) -> Content
+    private let customViewBuilder: (MarkdownBlock.CustomView) -> Content
 
     @Environment(\.markdownStyle) private var style
 
     /// Note: Do not recreate the ``MarkdownDocument`` for every SwiftUI refresh unless necessary.
     public init(_ model: MarkdownDocument, lazy: Bool, @ViewBuilder _ customViewBuilder: @escaping (CustomViewTag) -> Content) {
+        self.model = model
+        self.lazy = lazy
+        self.customViewBuilder = { customView in customViewBuilder(customView.tag) }
+    }
+
+    /// Note: Do not recreate the ``MarkdownDocument`` for every SwiftUI refresh unless necessary.
+    public init(_ model: MarkdownDocument, lazy: Bool, @ViewBuilder customView customViewBuilder: @escaping (MarkdownBlock.CustomView) -> Content) {
         self.model = model
         self.lazy = lazy
         self.customViewBuilder = customViewBuilder
@@ -52,7 +59,7 @@ public struct Markdown<Content: View>: View {
             case .image(let image):
                 MarkdownImage(image)
             case .customView(let customView):
-                customViewBuilder(customView.tag)
+                customViewBuilder(customView)
             }
         }
     }
@@ -62,7 +69,7 @@ extension Markdown where Content == EmptyView {
     public init(_ model: MarkdownDocument, lazy: Bool) {
         self.model = model
         self.lazy = lazy
-        self.customViewBuilder = { _ in EmptyView() }
+        self.customViewBuilder = { (_: MarkdownBlock.CustomView) in EmptyView() }
     }
 }
 
@@ -73,11 +80,11 @@ private let previewMarkdownDoc = try! MarkdownDocument(previewMarkdown)
 
 #Preview("Markdown") {
     ScrollView {
-        Markdown(previewMarkdownDoc, lazy: false) { tag in
-            if tag == "myCustomView" {
-                MyCustomView()
+        Markdown(previewMarkdownDoc, lazy: false, customView: { customView in
+            if customView.tag == "myCustomView" {
+                MyCustomView(title: customView.parameters["title"] ?? "Click me")
             }
-        }
+        })
         .markdownStyle(MarkdownStyle())
         .tint(.blue) // Link color
         .padding()
@@ -86,11 +93,11 @@ private let previewMarkdownDoc = try! MarkdownDocument(previewMarkdown)
 
 #Preview("Lazy Markdown") {
     ScrollView {
-        Markdown(previewMarkdownDoc, lazy: true) { tag in
-            if tag == "myCustomView" {
-                MyCustomView()
+        Markdown(previewMarkdownDoc, lazy: true, customView: { customView in
+            if customView.tag == "myCustomView" {
+                MyCustomView(title: customView.parameters["title"] ?? "Click me")
             }
-        }
+        })
         .markdownStyle(MarkdownStyle())
         .tint(.blue) // Link color
         .padding()
@@ -99,12 +106,14 @@ private let previewMarkdownDoc = try! MarkdownDocument(previewMarkdown)
 
 
 private struct MyCustomView: View {
+    var title: String = "Click me"
+
     var body: some View {
         VStack {
             Button {
                 print("Click!")
             } label: {
-                Text("Click me")
+                Text(title)
             }
             .buttonStyle(.borderedProminent)
         }
@@ -194,7 +203,7 @@ And here's a local image from the asset catalog:
 
 Here's a custom view:
 
-<view tag="myCustomView"/>
+<view tag="myCustomView" title="Press Here" />
 
 This is just some text after the custom view.
 """#
