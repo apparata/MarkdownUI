@@ -272,7 +272,7 @@ public struct MarkdownDocument {
                     continue
                 } else {
                     table.rows[rowIndex].cells.append(cell)
-                    blocksByID[id] = .table(table )
+                    blocksByID[id] = .table(table)
                 }
             } else {
                 blockOrder.append(id)
