@@ -30,7 +30,8 @@ struct MarkdownImage: View {
             .padding(.bottom, style.image.padding.bottom)
         } else {
             #if os(macOS)
-            if let image = NSImage(contentsOfFile: path(from: url)) {
+            let bundleImage = style.image.bundle?.image(forResource: path(from: url))
+            if let image = bundleImage ?? NSImage(contentsOfFile: path(from: url)) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
@@ -39,7 +40,8 @@ struct MarkdownImage: View {
                     .padding(.bottom, style.image.padding.bottom)
             }
             #else
-            if let image = UIImage(contentsOfFile: path(from: url)) {
+            let bundleImage = UIImage(named: path(from: url), in: style.image.bundle, with: nil)
+            if let image = bundleImage ?? UIImage(contentsOfFile: path(from: url)) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
