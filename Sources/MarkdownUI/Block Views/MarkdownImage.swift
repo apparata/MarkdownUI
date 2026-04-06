@@ -39,10 +39,15 @@ struct MarkdownImage: View {
     }
 
     private func path(from: URL) -> String {
+        var result: String
         if #available(iOS 16.0, macOS 13.0, *) {
-            return url.path(percentEncoded: false)
+            result = url.path(percentEncoded: false)
         } else {
-            return url.path
+            result = url.path
         }
+        if let queryIndex = result.firstIndex(of: "?") {
+            result = String(result[..<queryIndex])
+        }
+        return result
     }
 }
