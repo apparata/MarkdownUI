@@ -29,12 +29,25 @@ struct MarkdownImage: View {
             .padding(.top, style.image.padding.top)
             .padding(.bottom, style.image.padding.bottom)
         } else {
-            Image(path(from: url), bundle: style.image.bundle)
-                .resizable()
-                .scaledToFit()
-                .cornerRadius(style.image.cornerRadius)
-                .padding(.top, style.image.padding.top)
-                .padding(.bottom, style.image.padding.bottom)
+            #if os(macOS)
+            if let image = NSImage(contentsOfFile: path(from: url)) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .cornerRadius(style.image.cornerRadius)
+                    .padding(.top, style.image.padding.top)
+                    .padding(.bottom, style.image.padding.bottom)
+            }
+            #else
+            if let image = UIImage(contentsOfFile: path(from: url)) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .cornerRadius(style.image.cornerRadius)
+                    .padding(.top, style.image.padding.top)
+                    .padding(.bottom, style.image.padding.bottom)
+            }
+            #endif
         }
     }
 
