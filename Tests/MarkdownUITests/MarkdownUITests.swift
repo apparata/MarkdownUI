@@ -99,6 +99,110 @@ final class MarkdownUITests: XCTestCase {
         XCTAssertEqual(view.parameters["count"], "5")
     }
 
+    // MARK: - Table Parsing
+
+    private func firstTable(in markdown: String) throws -> MarkdownBlock.Table {
+        let doc = try MarkdownDocument(markdown)
+        let block = try XCTUnwrap(doc.blocks.first(where: { if case .table = $0 { return true }; return false }))
+        guard case .table(let table) = block else {
+            XCTFail("Expected a table block")
+            fatalError()
+        }
+        return table
+    }
+
+    private func cellText(_ table: MarkdownBlock.Table) -> [[String]] {
+        table.rows.map { $0.cells.map { String($0.text.characters) } }
+    }
+
+    func testTable() throws {
+        let table = try firstTable(in: """
+        | A | B |
+        |---|---|
+        | 1 | 2 |
+        | 3 | 4 |
+        """)
+        XCTAssertEqual(table.columns.count, 2)
+        XCTAssertEqual(cellText(table), [["A", "B"], ["1", "2"], ["3", "4"]])
+        XCTAssertTrue(table.rows[0].isHeader)
+        XCTAssertFalse(table.rows[1].isHeader)
+    }
+
+    func testTableWithEmptyCellInTheMiddle() throws {
+        let table = try firstTable(in: """
+        | A | B | C |
+        |---|---|---|
+        | 1 |   | 3 |
+        """)
+        XCTAssertEqual(cellText(table), [["A", "B", "C"], ["1", "", "3"]])
+    }
+
+    func testTableWithEmptyCellFirst() throws {
+        let table = try firstTable(in: """
+        | A | B |
+        |---|---|
+        |   | 2 |
+        """)
+        XCTAssertEqual(cellText(table), [["A", "B"], ["", "2"]])
+    }
+
+    func testTableWithEmptyCellLast() throws {
+        let table = try firstTable(in: """
+        | A | B | C |
+        |---|---|---|
+        | 1 | 2 |   |
+        """)
+        XCTAssertEqual(cellText(table), [["A", "B", "C"], ["1", "2", ""]])
+    }
+
+    func testTableWithEmptyHeaderCell() throws {
+        let table = try firstTable(in: """
+        | A |   | C |
+        |---|---|---|
+        | 1 | 2 | 3 |
+        """)
+        XCTAssertEqual(cellText(table), [["A", "", "C"], ["1", "2", "3"]])
+    }
+
+    func testTableWithEntirelyEmptyRow() throws {
+        let table = try firstTable(in: """
+        | A | B |
+        |---|---|
+        | 1 | 2 |
+        |   |   |
+        | 5 | 6 |
+        """)
+        XCTAssertEqual(cellText(table), [["A", "B"], ["1", "2"], ["", ""], ["5", "6"]])
+    }
+
+    func testTableRowsAndCellsHaveUniqueIDs() throws {
+        let table = try firstTable(in: """
+        | A |   | C |
+        |---|---|---|
+        | 1 |   |   |
+        |   |   |   |
+        |   | 2 | 3 |
+        """)
+        XCTAssertEqual(table.rows.count, 4)
+        XCTAssertEqual(Set(table.rows.map(\.id)).count, table.rows.count)
+        for row in table.rows {
+            XCTAssertEqual(Set(row.cells.map(\.id)).count, row.cells.count)
+        }
+    }
+
+    func testTableRowsAndCellsAreIndexedInOrder() throws {
+        let table = try firstTable(in: """
+        | A |   | C |
+        |---|---|---|
+        |   | 2 |   |
+        | 4 |   | 6 |
+        """)
+        XCTAssertEqual(table.rows.map(\.index), [0, 1, 2])
+        for row in table.rows {
+            XCTAssertEqual(row.cells.map(\.index), [0, 1, 2])
+        }
+    }
+
     static var allTests = [
         ("testExample", testExample),
     ]

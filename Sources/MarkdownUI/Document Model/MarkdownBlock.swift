@@ -181,10 +181,28 @@ public enum MarkdownBlock: Identifiable {
                 self.cells = cells
             }
 
-            internal func insertingCell(_ cell: Cell, at index: Int) -> Row {
+            /// Inserts a cell at the given column index, padding with empty cells if the row
+            /// does not have that many cells yet.
+            ///
+            /// Empty cells are not represented by any run when the Markdown is parsed, so there
+            /// may be gaps in the column indices of the cells that are inserted into a row.
+            ///
+            /// - Parameters:
+            ///   - cell: The cell to insert.
+            ///   - index: The column index to insert the cell at.
+            ///   - makeID: Makes an ID for each padding cell that needs to be inserted.
+            ///
+            internal func insertingCell(
+                _ cell: Cell,
+                at index: Int,
+                makeID: () -> MarkdownBlock.ID
+            ) -> Row {
                 var cells = self.cells
+                while cells.count < index {
+                    cells.append(Cell(id: makeID(), index: cells.count, text: ""))
+                }
                 cells.insert(cell, at: index)
-                return Row(id: id, index: index, isHeader: isHeader, cells: cells)
+                return Row(id: id, index: self.index, isHeader: isHeader, cells: cells)
             }
         }
 
@@ -206,18 +224,6 @@ public enum MarkdownBlock: Identifiable {
             self.indentationLevel = indentationLevel
             self.rows = rows
             self.columns = columns
-        }
-
-        internal func insertingRow(_ row: Row, at index: Int) -> Table {
-            var rows = self.rows
-            rows.insert(row, at: index)
-            return Table(id: id, indentationLevel: indentationLevel, rows: rows, columns: columns)
-        }
-
-        internal func replacingRow(at index: Int, with row: Row) -> Table {
-            var rows = self.rows
-            rows[index] = row
-            return Table(id: id, indentationLevel: indentationLevel, rows: rows, columns: columns)
         }
     }
 

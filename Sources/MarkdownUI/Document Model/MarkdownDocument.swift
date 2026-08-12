@@ -48,6 +48,14 @@ public struct MarkdownDocument {
         // This is kludgy, but we will give custom views a high ID
         var currentCustomViewID: Int = 1_000_000_000
 
+        // Empty table rows and cells are not represented by any run, so we need to make up
+        // IDs for the placeholders that take their place. Give those an even higher ID.
+        var currentPlaceholderID: Int = 2_000_000_000
+        func makePlaceholderID() -> MarkdownBlock.ID {
+            defer { currentPlaceholderID += 1 }
+            return currentPlaceholderID
+        }
+
     runLoop: for (run, range) in runs {
 
         guard let run, !run.components.isEmpty else {
@@ -257,26 +265,11 @@ public struct MarkdownDocument {
                 break
             }
 
-            if let block = blocksByID[id], case .table(var table) = block {
-                if table.rows.count > rowIndex {
-                    // Row already exists
-                    let row = table.rows[rowIndex]
-                    let newRow = row.insertingCell(cell, at: cell.index)
-                    let newTable = table.replacingRow(at: rowIndex, with: newRow)
-                    blocksByID[id] = .table(newTable)
-                } else if table.rows.count == rowIndex {
-                    let row = MarkdownBlock.Table.Row(id: rowID, index: rowIndex, isHeader: isHeaderRow, cells: [cell])
-                    let newTable = table.insertingRow(row, at: rowIndex)
-                    blocksByID[id] = .table(newTable)
-                } else if table.rows.count < rowIndex {
-                    continue
-                } else {
-                    table.rows[rowIndex].cells.append(cell)
-                    blocksByID[id] = .table(table)
-                }
+            var table: MarkdownBlock.Table
+            if let block = blocksByID[id], case .table(let existingTable) = block {
+                table = existingTable
             } else {
                 blockOrder.append(id)
-                let row = MarkdownBlock.Table.Row(id: rowID, index: rowIndex, isHeader: isHeaderRow, cells: [cell])
                 let columns: [MarkdownBlock.Table.Column] = columns.map {
                     let alignment: HorizontalAlignment = switch $0.alignment {
                     case .left: .leading
@@ -286,15 +279,52 @@ public struct MarkdownDocument {
                     }
                     return .init(alignment: alignment)
                 }
-                blocksByID[id] = .table(.init(id: id, indentationLevel: level, rows: [row], columns: columns))
+                table = .init(id: id, indentationLevel: level, rows: [], columns: columns)
             }
+
+            // A row where every cell is empty is not represented by any run, which leaves a
+            // gap in the row indices. Pad with empty rows, so that the rows that do have
+            // content stay at the index that the parser gave them.
+            while table.rows.count < rowIndex {
+                table.rows.append(
+                    .init(id: makePlaceholderID(), index: table.rows.count, isHeader: false, cells: [])
+                )
+            }
+
+            if rowIndex < table.rows.count {
+                // Row already exists.
+                table.rows[rowIndex] = table.rows[rowIndex]
+                    .insertingCell(cell, at: cell.index, makeID: makePlaceholderID)
+            } else {
+                table.rows.append(
+                    MarkdownBlock.Table.Row(id: rowID, index: rowIndex, isHeader: isHeaderRow, cells: [])
+                        .insertingCell(cell, at: cell.index, makeID: makePlaceholderID)
+                )
+            }
+
+            blocksByID[id] = .table(table)
 
         default:
             continue runLoop
         }
     }
 
-        self.blocks = blockOrder.compactMap { blocksByID[$0] }
+        self.blocks = blockOrder.compactMap { blocksByID[$0] }.map { block in
+            guard case .table(var table) = block else {
+                return block
+            }
+            // Trailing empty cells are not represented by any run either, so pad every row
+            // out to the full column count to keep the table rectangular.
+            for rowIndex in table.rows.indices {
+                while table.rows[rowIndex].cells.count < table.columns.count {
+                    let cellIndex = table.rows[rowIndex].cells.count
+                    table.rows[rowIndex].cells.append(
+                        .init(id: makePlaceholderID(), index: cellIndex, text: "")
+                    )
+                }
+            }
+            return .table(table)
+        }
     }
 
 
